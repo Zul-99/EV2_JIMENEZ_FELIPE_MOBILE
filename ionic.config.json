@@ -1,0 +1,7 @@
+{
+  "name": "EVU1_JIMENEZ_FELIPE",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}
