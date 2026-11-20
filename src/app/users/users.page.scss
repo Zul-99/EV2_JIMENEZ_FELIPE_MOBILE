@@ -1,0 +1,55 @@
+// El fondo de ciudad y las clases .glass-card / .glass-item están en src/global.scss.
+
+ion-title {
+  color: var(--ion-color-primary-tint);
+}
+
+ion-list {
+  background: transparent;
+}
+
+.user-form ion-input {
+  --border-color: rgba(var(--ion-color-tertiary-rgb), 0.6);
+  margin-bottom: 8px;
+}
+
+.add-button {
+  --background: linear-gradient(135deg, var(--ion-color-primary), var(--ion-color-secondary));
+  --border-radius: 10px;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.error {
+  display: block;
+  padding: 4px 16px 8px;
+}
+
+// Avatar redondo (ion-avatar ya es circular). Muestra las iniciales del usuario;
+// para usar una foto real basta con poner un <img> dentro en vez del <span>.
+.user-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, var(--ion-color-primary), var(--ion-color-secondary));
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 12px rgba(var(--ion-color-secondary-rgb), 0.5);
+
+  span {
+    color: #fff;
+    font-weight: 700;
+    font-size: 1rem;
+  }
+}
+
+ion-item h2 {
+  color: var(--ion-color-primary-tint);
+  font-weight: 600;
+}
+
+.empty {
+  color: var(--ion-color-tertiary-tint);
+  text-align: center;
+}

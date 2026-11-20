@@ -1,27 +1,61 @@
-#container {
-  text-align: center;
+// Los colores vienen de src/theme/variables.scss a través de las variables CSS de Ionic.
+// El fondo de ciudad y las clases .glass-card / .glass-item están en src/global.scss.
 
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+ion-title {
+  color: var(--ion-color-primary-tint);
 }
 
-#container strong {
-  font-size: 20px;
-  line-height: 26px;
+.task-form ion-input {
+  --color: var(--ion-text-color);
+  --border-color: rgba(var(--ion-color-tertiary-rgb), 0.6);
+  margin-bottom: 8px;
 }
 
-#container p {
-  font-size: 16px;
-  line-height: 22px;
-
-  color: #8c8c8c;
-
-  margin: 0;
+.add-button {
+  --background: linear-gradient(135deg, var(--ion-color-primary), var(--ion-color-secondary));
+  --background-activated: var(--ion-color-secondary-shade);
+  --border-radius: 10px;
+  --box-shadow: 0 4px 14px rgba(var(--ion-color-secondary-rgb), 0.35);
+  margin-top: 4px;
+  font-weight: 600;
 }
 
-#container a {
-  text-decoration: none;
+.task-list {
+  background: transparent;
+}
+
+.task-item {
+  border-left: 4px solid var(--ion-color-secondary);
+
+  h2 {
+    color: var(--ion-color-primary-tint);
+    font-weight: 600;
+  }
+
+  p {
+    color: rgba(var(--ion-text-color-rgb), 0.7);
+  }
+
+  &.empty {
+    border-left-color: var(--ion-color-tertiary);
+    color: var(--ion-color-tertiary-tint);
+    text-align: center;
+  }
+}
+
+.device-buttons {
+  display: flex;
+  gap: 8px;
+
+  ion-button {
+    flex: 1;
+    --border-radius: 10px;
+  }
+}
+
+.device-photo {
+  display: block;
+  max-width: 100%;
+  margin-top: 12px;
+  border-radius: 12px;
 }

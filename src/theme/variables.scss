@@ -1,2 +1,46 @@
-// For information on how to create your own theme, please refer to:
-// https://ionicframework.com/docs/theming/
+@use 'sass:color';
+
+// Paleta de colores propia (tema oscuro). La paleta base de Ionic se importa en global.scss.
+
+$bg: #0d0d14;
+$surface: #161622;
+$card: #1e1e2e;
+$text: #e4e4ef;
+$blue: #22d3ee; // cian neón
+$purple: #d946ef; // magenta neón
+$indigo: #818cf8;
+$danger: #e5484d;
+
+@function rgb-list($c) {
+  @return color.channel($c,"red", $space: rgb), color.channel($c, "green", $space: rgb), color.channel($c, "blue", $space: rgb);
+}
+
+@mixin ion-color($name, $base, $contrast: #ffffff) {
+
+    --ion-color-#{$name}: #{$base};
+    --ion-color-#{$name}-rgb: #{rgb-list($base)};
+    --ion-color-#{$name}-contrast: #{$contrast};
+    --ion-color-#{$name}-contrast-rgb: #{rgb-list($contrast)};
+    --ion-color-#{$name}-shade: #{color.mix(#000, $base, 12%)};
+    --ion-color-#{$name}-tint: #{color.mix(#fff, $base, 10%)};
+}
+
+// Ionic define el fondo, toolbar e items en ":root.ios" y ":root.md", que tienen
+// más especificidad que ":root"; por eso hay que repetir esos selectores aquí.
+:root,
+:root.ios,
+:root.md {
+  @include ion-color(primary, $blue, #04131f);
+  @include ion-color(secondary, $purple);
+  @include ion-color(tertiary, $indigo);
+  @include ion-color(danger, $danger);
+    
+  --ion-background-color: #{$bg};
+  --ion-background-color-rgb: #{rgb-list($bg)};
+  --ion-text-color: #{$text};
+  --ion-text-color-rgb: #{rgb-list($text)};
+
+  --ion-toolbar-background: #{$surface};
+  --ion-item-background: #{$surface};
+  --ion-card-background: #{$card};
+}

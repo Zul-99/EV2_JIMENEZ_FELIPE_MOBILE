@@ -1,0 +1,45 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Usuarios</ion-title>
+    <ion-buttons slot="end">
+      <ion-button routerLink="/home">Mis tareas</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding city-bg">
+  <form [formGroup]="userForm" (ngSubmit)="addUser()" class="user-form glass-card">
+    <ion-list lines="none">
+      <ion-item>
+        <ion-input formControlName="nombre" label="Nombre" labelPlacement="floating" fill="outline" type="text"></ion-input>
+      </ion-item>
+      @if (userForm.controls.nombre.touched && userForm.controls.nombre.invalid) {
+        <ion-note color="danger" class="error">El nombre es obligatorio (mínimo 2 caracteres).</ion-note>
+      }
+      <ion-item>
+        <ion-input formControlName="email" label="Correo" labelPlacement="floating" fill="outline" type="email"></ion-input>
+      </ion-item>
+      @if (userForm.controls.email.touched && userForm.controls.email.invalid) {
+        <ion-note color="danger" class="error">Ingresa un correo válido.</ion-note>
+      }
+    </ion-list>
+    <ion-button class="add-button" expand="block" type="submit">Agregar usuario</ion-button>
+  </form>
+
+  <h3 class="section-title">Usuarios ({{ users.length }})</h3>
+  <ion-list lines="none">
+    @for (user of users; track user.id) {
+      <ion-item class="glass-item">
+        <ion-avatar slot="start" class="user-avatar" aria-hidden="true">
+          <span>{{ initials(user.nombre) }}</span>
+        </ion-avatar>
+        <ion-label><h2>{{ user.nombre }}</h2><p>{{ user.email }}</p></ion-label>
+        <ion-button slot="end" fill="clear" color="danger" (click)="deleteUser(user.id)" [attr.aria-label]="'Eliminar a ' + user.nombre">
+          <ion-icon slot="icon-only" name="trash"></ion-icon>
+        </ion-button>
+      </ion-item>
+    } @empty {
+      <ion-item class="glass-item empty"><ion-label>No hay usuarios todavía</ion-label></ion-item>
+    }
+  </ion-list>
+</ion-content>
