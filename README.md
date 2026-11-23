@@ -2,6 +2,8 @@
 
 ## 1. ¿Qué hace la app?
 
+(texto de prueba)
+
 Es una **lista de tareas** con gestión de usuarios y acceso a funciones del celular:
 
 - Escribes un **título** y una **descripción**.
