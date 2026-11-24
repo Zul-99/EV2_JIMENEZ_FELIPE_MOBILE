@@ -13,13 +13,16 @@
   <div class="task-form glass-card">
     <ion-list lines="none">
       <ion-item>
-        <ion-input label="Título" labelPlacement="floating" fill="outline" color="primary" [(ngModel)]="title"></ion-input>
+        <ion-input label="Título" labelPlacement="floating" fill="outline" color="primary" [(ngModel)]="title" [maxlength]="tituloMax" [counter]="true"></ion-input>
       </ion-item>
       <ion-item>
-        <ion-input label="Descripción" labelPlacement="floating" fill="outline" color="secondary" [(ngModel)]="description"></ion-input>
+        <ion-input label="Descripción" labelPlacement="floating" fill="outline" color="secondary" [(ngModel)]="description" [maxlength]="descripcionMax" [counter]="true"></ion-input>
       </ion-item>
     </ion-list>
-    <ion-button class="add-button" expand="block" (click)="addTask()" [disabled]="!title.trim()">{{ editingTaskId === null ? 'Agregar' : 'Guardar cambios' }}</ion-button>
+    @if (errorTarea) {
+      <ion-note color="danger" class="error">{{ errorTarea }}</ion-note>
+    }
+    <ion-button class="add-button" expand="block" (click)="addTask()" [disabled]="!puedeGuardar">{{ editingTaskId === null ? 'Agregar' : 'Guardar cambios' }}</ion-button>
     @if (editingTaskId !== null) {
       <ion-button expand="block" fill="clear" (click)="cancelEdit()">Cancelar edición</ion-button>
     }
@@ -56,23 +59,34 @@
         <ion-icon slot="start" name="camera-outline"></ion-icon>
         Tomar foto
       </ion-button>
-      <ion-button fill="outline" (click)="obtenerUbicacion()">
-        <ion-icon slot="start" name="location-outline"></ion-icon>
-        Ubicación
-      </ion-button>
     </div>
 
-    @if (foto) {
-      <img class="device-photo" [src]="foto" alt="Foto capturada" />
+    @if (foto(); as fotoUrl) {
+      <figure class="photo-figure">
+        <img class="device-photo" [src]="fotoUrl" alt="Foto capturada" />
+        <figcaption class="photo-caption">
+          <ion-icon name="location-outline" aria-hidden="true"></ion-icon>
+          @if (buscandoUbicacion()) {
+            <span>Obteniendo ubicación…</span>
+          } @else if (ubicacion(); as u) {
+            <a [href]="linkMapa()" target="_blank" rel="noopener" aria-label="Ver ubicación de la foto en Google Maps">
+              {{ u.latitude | number: '1.5-5' }}, {{ u.longitude | number: '1.5-5' }}
+            </a>
+            <span class="photo-accuracy">
+              {{ precisionTexto() }}
+              @if (esAproximada()) {
+                <strong class="photo-approx">(aproximada)</strong>
+              }
+            </span>
+          } @else {
+            <span>Sin ubicación</span>
+          }
+        </figcaption>
+      </figure>
     }
 
-    @if (ubicacion) {
-      <p>Latitud: {{ ubicacion.latitude }}</p>
-      <p>Longitud: {{ ubicacion.longitude }}</p>
-    }
-
-    @if (mensajeDispositivo) {
-      <p role="status">{{ mensajeDispositivo }}</p>
+    @if (mensajeDispositivo()) {
+      <p role="status">{{ mensajeDispositivo() }}</p>
     }
   </div>
 </ion-content>

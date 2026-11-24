@@ -22,6 +22,12 @@ export class UserService {
     return this.users();
   }
 
+  /** true si ya existe un usuario con ese correo (sin importar mayúsculas). */
+  existsEmail(email: string): boolean {
+    const buscado = email.trim().toLowerCase();
+    return this.users().some(user => user.email.toLowerCase() === buscado);
+  }
+
   add(nombre: string, email: string): void {
     this.users.update(users => [...users, { id: this.nextId++, nombre, email }]);
   }

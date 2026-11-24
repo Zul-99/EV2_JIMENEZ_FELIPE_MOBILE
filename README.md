@@ -8,7 +8,7 @@ Es una **lista de tareas** con gestión de usuarios y acceso a funciones del cel
 - Presionas **"Agregar"** y la tarea aparece en la lista.
 - Cada tarea tiene un **lápiz** para editarla y un **ícono de basura** para borrarla. Antes de borrarla, la app te pregunta si estás seguro.
 - Si no hay tareas, aparece el mensaje **"No hay tareas todavía"**.
-- Puedes **tomar una foto** con la cámara y **obtener tu ubicación** (GPS).
+- Puedes **tomar una foto** con la cámara; la app le adjunta las **coordenadas GPS** de donde se tomó, como pie de foto con link a Google Maps.
 - En la pantalla **Usuarios** puedes agregar y borrar usuarios (ver sección 13).
 - Las tareas y usuarios se guardan en el **`localStorage`** del navegador, así que **no se pierden al recargar** (ver sección 14).
 
@@ -21,6 +21,7 @@ Es una **lista de tareas** con gestión de usuarios y acceso a funciones del cel
 | **Angular** | El framework con el que se programa la app (TypeScript + HTML). |
 | **Ionic** | Da los componentes visuales con aspecto de app móvil (`ion-button`, `ion-list`, etc.). |
 | **Capacitor** | Convierte la app web en una app de Android o iOS. |
+| **@ionic/pwa-elements** | Visor de cámara para cuando la app corre en el navegador. |
 | **Sass (SCSS)** | Es CSS con extras (variables, funciones, mixins). |
 | **Vitest** | Corre los tests (pruebas automáticas). |
 
@@ -41,6 +42,7 @@ src/
     ├── models/task.ts   → Cómo es una tarea (su forma)
     ├── models/user.ts   → Cómo es un usuario (su forma)
     ├── services/task.service.ts → Dónde se guardan y manejan las tareas
+    ├── services/location.service.ts → Obtiene la ubicación GPS más precisa
     └── services/user.service.ts → Dónde se guardan y manejan los usuarios
 src/assets/cyberpunk.jpg → Imagen de fondo de la app
 android/                 → Proyecto nativo de Android (generado por Capacitor)
@@ -131,8 +133,12 @@ editingTaskId: number | null = null; // id de la tarea que se está editando (nu
 
 - **`inject()`** → trae el servicio a la página (esto se llama *inyección de dependencias*).
 - **`get tasks()`** → le pide las tareas al servicio para mostrarlas.
+- **`errorTarea`** → devuelve el mensaje de error del formulario (o `''` si está bien). Valida que el
+  título no sea solo espacios, que tenga máximo **60** caracteres y que la descripción tenga máximo **200**.
+  El mensaje se muestra en rojo con `ion-note`, y los inputs tienen contador de caracteres (`counter`).
+- **`puedeGuardar`** → `true` solo si hay título y no hay errores; controla si el botón está activo.
 - **`addTask()`**:
-  1. Si el título está vacío, no hace nada.
+  1. Si `puedeGuardar` es `false`, no hace nada.
   2. Si no, agrega la tarea con `trim()` (borra los espacios del principio y del final).
   3. Si se está editando (`editingTaskId` no es `null`), usa `update()` en vez de `add()`.
   4. Limpia los campos.
@@ -141,14 +147,59 @@ editingTaskId: number | null = null; // id de la tarea que se está editando (nu
 - **`deleteTask(id)`** → muestra una alerta con "Cancelar" y "Borrar". Solo si presionas "Borrar", la tarea se elimina.
 - **`addIcons({ ... })`** → registra los íconos que usa la página (basura, lápiz, cámara, ubicación).
 
-### Cámara y ubicación (Capacitor)
+### Foto con ubicación (Capacitor)
 
-- **`tomarFoto()`** → usa `Camera.getPhoto()` del plugin `@capacitor/camera`. En el navegador
-  abre un selector de archivo; en Android abre la cámara. La foto se muestra en pantalla.
-- **`obtenerUbicacion()`** → usa `Geolocation.getCurrentPosition()` del plugin
-  `@capacitor/geolocation` y muestra la latitud y longitud.
-- Ambas usan `try/catch`: si algo falla (sin permisos, GPS apagado), se muestra un mensaje.
+No hay un botón aparte de ubicación: **la ubicación va adjunta a la foto**.
+
+- **`tomarFoto()`** → usa `Camera.getPhoto()` del plugin `@capacitor/camera` con
+  `source: CameraSource.Camera` y `webUseInput: false`, así **siempre abre la cámara** (no la galería):
+  - en **Android** abre la app de cámara (cámara trasera);
+  - en el **navegador** abre la webcam con el visor de `@ionic/pwa-elements`, que se activa en
+    `src/main.ts` con `defineCustomElements(window)`. Si el equipo no tiene cámara, Capacitor ofrece elegir un archivo.
+
+  Cuando hay foto, llama a `adjuntarUbicacion()`.
+- **`adjuntarUbicacion()`** → le pide la ubicación a `services/location.service.ts` y la guarda
+  junto a la foto. Si se toma otra foto antes de que llegue la ubicación de la anterior, esa
+  ubicación vieja se descarta (contador `fotoActual`).
+- **Pie de foto** (`<figure>` + `<figcaption>`): muestra "Obteniendo ubicación…" mientras busca, y luego
+  las **coordenadas** como link **clickeable a Google Maps** (`linkMapa`) más la **precisión (± metros)**.
+  En Android, el link abre la app de Google Maps si está instalada.
+- **`foto`, `ubicacion`, `buscandoUbicacion`, `mensajeDispositivo` y `linkMapa` son `signal`/`computed`.**
+  La app funciona sin `zone.js`, así que si fueran variables normales, la foto y la ubicación
+  (que llegan después de un `await`) no aparecerían hasta el siguiente clic o cambio de pestaña.
+  En la plantilla se leen como función: `foto()`, `ubicacion()`, etc.
+- **Precisión legible:** `formatearPrecision()` muestra el error en formato chileno (`Intl.NumberFormat('es-CL')`):
+  `± 8 m` si es menor a 1 km, o `± 2,5 km` / `± 1.277 km` si es mayor. Si el error supera **1 km**
+  (`UMBRAL_APROXIMADA`), el pie de foto agrega **"(aproximada)"**. Esto pasa, por ejemplo, en un PC sin GPS,
+  donde el navegador ubica por la IP y solo sabe el país o la ciudad.
+- La foto y su pie se muestran **centrados** en la tarjeta (`.photo-figure` con `flex` + `align-items: center`).
+- Ambas usan `try/catch`: si falla la cámara o la ubicación (sin permisos, GPS apagado), se muestra un mensaje.
 - Los permisos de ubicación están en `android/app/src/main/AndroidManifest.xml`.
+
+#### ¿Por qué la ubicación a veces queda "cerca pero lejos"?
+
+Antes se usaba `getCurrentPosition()`, que devuelve **la primera lectura** que tenga el
+celular. Esa lectura casi siempre viene de **Wi-Fi o de las antenas** (cientos de metros de
+error), porque el GPS tarda unos segundos en "enganchar" satélites.
+
+Ahora `LocationService.obtenerMejorUbicacion()` usa **`watchPosition()`**: escucha varias
+lecturas seguidas y **se queda con la de menor error** (`coords.accuracy`). Se detiene apenas
+logra **20 m o menos**, o a los **15 segundos** como máximo, y apaga el seguimiento con
+`clearWatch()` para no gastar batería. Se usa `maximumAge: 0` para no recibir una posición vieja guardada.
+
+- Los errores de **tiempo agotado** o **posición no disponible** no cortan la búsqueda (en un PC sin
+  GPS son normales al pedir alta precisión). Solo **permiso denegado** la corta de inmediato.
+- Si en esos 15 segundos no llegó ninguna lectura, se hace un **intento de respaldo** con
+  `getCurrentPosition()` en baja precisión (Wi-Fi / IP), para que la foto igual tenga coordenadas.
+
+Además la app avisa cuando:
+- la precisión es peor que **100 m** (GPS apagado, bajo techo, etc.),
+- en Android 12+ el usuario dio solo permiso de **ubicación aproximada** (≈1–3 km de error).
+
+> ℹ️ En el **navegador de un PC** no hay GPS: la ubicación sale del Wi-Fi o de la IP, así que
+> puede tener cientos de metros de error. Para probar la precisión real hay que usar el **celular**.
+
+El plugin se inyecta con el token `GEOLOCATION`, así los tests pueden usar un GPS falso.
 
 ### Vista (`home.page.html`)
 
@@ -201,9 +252,10 @@ editingTaskId: number | null = null; // id de la tarea que se está editando (nu
 
 | Archivo | Qué comprueba |
 |---|---|
+| `services/location.service.spec.ts` | Con un GPS falso: que se queda con la lectura más precisa, que se detiene al llegar a 20 m, que si se acaba el tiempo devuelve la mejor lectura, y que ignora errores de "tiempo agotado", que usa el respaldo de baja precisión si no llega ninguna lectura, y que corta de inmediato si se niega el permiso. |
 | `services/task.service.spec.ts` | Que el servicio se crea, que se puede agregar y borrar una tarea, y que las tareas siguen ahí después de "recargar" (se crea un servicio nuevo y lee el `localStorage`). |
-| `home/home.page.spec.ts` | Editar una tarea sin duplicarla, cancelar la edición, que la tarea desaparece de pantalla apenas se confirma el borrado, y que borrar la tarea en edición limpia el formulario. |
-| `users/users.page.spec.ts` | Agregar un usuario (con `trim()`), rechazar nombres muy cortos, que el usuario solo se borra al confirmar y desaparece de pantalla al instante, y las iniciales del avatar. |
+| `home/home.page.spec.ts` | Editar una tarea sin duplicarla, cancelar la edición, que la tarea desaparece de pantalla apenas se confirma el borrado, que borrar la tarea en edición limpia el formulario, que se rechazan títulos de solo espacios y textos demasiado largos, que la ubicación de la foto aparece como pie de foto con link a Google Maps, que la foto y el pie se actualizan en pantalla sin otro clic (signals), que se descarta la ubicación tardía de una foto anterior, y que se avisa si no se pudo obtener la ubicación. |
+| `users/users.page.spec.ts` | Agregar un usuario (con `trim()`), rechazar nombres muy cortos, correos sin dominio (`ana@correo`) y correos repetidos, que el usuario solo se borra al confirmar y desaparece de pantalla al instante, y las iniciales del avatar. |
 
 En los tests, el `AlertController` se reemplaza por uno falso (*mock*) para poder
 "presionar" el botón **Borrar** desde el código. Además, `src/test-setup.ts` limpia el
@@ -216,9 +268,14 @@ En los tests, el `AlertController` se reemplaza por uno falso (*mock*) para pode
 | Comando | Qué hace |
 |---|---|
 | `npm install` | Instala las dependencias. |
-| `ionic serve` o `npm start` | Abre la app en el navegador. |
+| `npm start` | Abre la app en el navegador (`http://localhost:4200`). |
 | `npm test` | Corre los tests. |
 | `npm run build` | Compila la app (el resultado queda en `www/`). |
+| `npx cap sync android` | Copia el build (`www/`) y los plugins al proyecto Android. Correrlo después de cada `npm run build`. |
+| `npx cap open android` | Abre el proyecto en Android Studio para instalar la app en el celular. |
+
+> No hace falta la CLI global de Ionic (`ionic ...`): `npm start` y `npm run build` hacen lo mismo
+> que `ionic serve` e `ionic build`. Si se quiere, se instala con `npm install -g @ionic/cli`.
 
 ---
 
@@ -235,6 +292,11 @@ En los tests, el `AlertController` se reemplaza por uno falso (*mock*) para pode
 - **¿Qué es un `signal`?** → Un valor reactivo: cuando cambia, Angular actualiza la pantalla automáticamente.
 - **¿Qué diferencia hay entre `ngModel` y formularios reactivos?** → `ngModel` (tareas) es más simple y se define en el HTML; los formularios reactivos (usuarios) se definen en el TypeScript con `FormBuilder` y permiten validaciones como `Validators.required` o `Validators.email`.
 - **¿Qué es `ion-avatar`?** → El componente circular de Ionic para fotos de perfil.
+- **¿Por qué `watchPosition` y no `getCurrentPosition`?** → Porque la primera lectura suele ser imprecisa (Wi-Fi/antenas); escuchando varias se puede elegir la de menor error.
+- **¿Qué es `coords.accuracy`?** → El radio de error en metros: la posición real está dentro de ese círculo. Ej: `± 1.277 km` significa que el navegador solo sabe que estás en Chile (ubicación por IP).
+- **¿Cómo se valida un correo repetido?** → Con un **validador propio** (`emailNoRepetido`) que le pregunta al `UserService` si el correo ya existe y devuelve el error `duplicado`.
+- **¿Por qué la foto usa `signal`?** → Porque sin `zone.js` Angular no detecta cambios hechos después de un `await`; el `signal` le avisa que debe redibujar.
+- **¿Para qué sirve `@ionic/pwa-elements`?** → Da el visor de cámara para el navegador; sin él, Capacitor en web solo puede abrir el selector de archivos.
 - **¿Qué es Capacitor?** → La herramienta que convierte la app web en app nativa y da acceso a la cámara, GPS, etc. mediante plugins.
 
 ---
@@ -253,6 +315,19 @@ Esta pantalla permite agregar usuarios con nombre y correo, consultar la lista
 con su cantidad y eliminar usuarios (antes de borrar, la app pide confirmación,
 igual que con las tareas). El nombre requiere al menos dos caracteres
 sin contar espacios al inicio y al final, y el correo debe tener un formato válido.
+
+**Validaciones del formulario de usuarios:**
+
+| Campo | Regla | Validador |
+|---|---|---|
+| Nombre | Obligatorio | `Validators.required` |
+| Nombre | Entre 2 y 50 caracteres (después del `trim()`) | `Validators.minLength(2)`, `Validators.maxLength(50)` |
+| Correo | Obligatorio | `Validators.required` |
+| Correo | Formato válido **con dominio** (`ana@correo.cl` sí, `ana@correo` no) | `Validators.email` + `Validators.pattern(...)` |
+| Correo | Máximo 100 caracteres | `Validators.maxLength(100)` |
+| Correo | No repetido (sin importar mayúsculas) | Validador propio `emailNoRepetido`, que usa `UserService.existsEmail()` |
+
+Cada error muestra su propio mensaje en rojo debajo del campo.
 El botón **Mis tareas** permite regresar a `/home`.
 
 Cada usuario se muestra con un **avatar redondo** (`ion-avatar`) con sus iniciales.

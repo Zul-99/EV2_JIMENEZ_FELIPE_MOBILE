@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
   IonAvatar, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonInput,
@@ -8,6 +8,11 @@ import {
 import { addIcons } from 'ionicons';
 import { trash } from 'ionicons/icons';
 import { UserService } from '../services/user.service';
+
+export const NOMBRE_MAX = 50;
+export const EMAIL_MAX = 100;
+/** Exige algo@dominio.ext (Validators.email solo acepta también "a@b", sin dominio). */
+const EMAIL_CON_DOMINIO = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 @Component({
   selector: 'app-users',
@@ -22,9 +27,22 @@ export class UsersPage {
   private readonly userService = inject(UserService);
   private readonly alertController = inject(AlertController);
 
+  readonly nombreMax = NOMBRE_MAX;
+  readonly emailMax = EMAIL_MAX;
+
+  /** Validador propio: marca error si el correo ya está registrado. */
+  private readonly emailNoRepetido = (control: AbstractControl): ValidationErrors | null =>
+    this.userService.existsEmail(control.value ?? '') ? { duplicado: true } : null;
+
   readonly userForm = this.formBuilder.nonNullable.group({
-    nombre: ['', [Validators.required, Validators.minLength(2)]],
-    email: ['', [Validators.required, Validators.email]],
+    nombre: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(NOMBRE_MAX)]],
+    email: ['', [
+      Validators.required,
+      Validators.email,
+      Validators.pattern(EMAIL_CON_DOMINIO),
+      Validators.maxLength(EMAIL_MAX),
+      this.emailNoRepetido,
+    ]],
   });
 
   get users() {

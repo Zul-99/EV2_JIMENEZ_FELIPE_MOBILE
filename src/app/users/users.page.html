@@ -11,16 +11,28 @@
   <form [formGroup]="userForm" (ngSubmit)="addUser()" class="user-form glass-card">
     <ion-list lines="none">
       <ion-item>
-        <ion-input formControlName="nombre" label="Nombre" labelPlacement="floating" fill="outline" type="text"></ion-input>
+        <ion-input formControlName="nombre" label="Nombre" labelPlacement="floating" fill="outline" type="text" [maxlength]="nombreMax" [counter]="true"></ion-input>
       </ion-item>
       @if (userForm.controls.nombre.touched && userForm.controls.nombre.invalid) {
-        <ion-note color="danger" class="error">El nombre es obligatorio (mínimo 2 caracteres).</ion-note>
+        <ion-note color="danger" class="error">
+          {{ userForm.controls.nombre.hasError('maxlength') ? 'El nombre admite máximo ' + nombreMax + ' caracteres.' : 'El nombre es obligatorio (mínimo 2 caracteres).' }}
+        </ion-note>
       }
       <ion-item>
-        <ion-input formControlName="email" label="Correo" labelPlacement="floating" fill="outline" type="email"></ion-input>
+        <ion-input formControlName="email" label="Correo" labelPlacement="floating" fill="outline" type="email" [maxlength]="emailMax"></ion-input>
       </ion-item>
       @if (userForm.controls.email.touched && userForm.controls.email.invalid) {
-        <ion-note color="danger" class="error">Ingresa un correo válido.</ion-note>
+        <ion-note color="danger" class="error">
+          @if (userForm.controls.email.hasError('required')) {
+            El correo es obligatorio.
+          } @else if (userForm.controls.email.hasError('duplicado')) {
+            Ya existe un usuario con ese correo.
+          } @else if (userForm.controls.email.hasError('maxlength')) {
+            El correo admite máximo {{ emailMax }} caracteres.
+          } @else {
+            Ingresa un correo válido (ej: nombre&#64;correo.cl).
+          }
+        </ion-note>
       }
     </ion-list>
     <ion-button class="add-button" expand="block" type="submit">Agregar usuario</ion-button>

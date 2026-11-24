@@ -59,4 +59,18 @@ describe('UsersPage', () => {
     expect(component.initials('Ana Pérez Soto')).toBe('AP');
     expect(component.initials('felipe')).toBe('F');
   });
+
+  it('rejects an email without domain extension', () => {
+    component.userForm.setValue({ nombre: 'Ana', email: 'ana@correo' });
+    component.addUser();
+    expect(service.getAll()).toHaveLength(0);
+  });
+
+  it('rejects a duplicated email ignoring case', () => {
+    service.add('Ana', 'ana@correo.cl');
+    component.userForm.setValue({ nombre: 'Otra Ana', email: 'ANA@correo.cl' });
+    expect(component.userForm.controls.email.hasError('duplicado')).toBe(true);
+    component.addUser();
+    expect(service.getAll()).toHaveLength(1);
+  });
 });
