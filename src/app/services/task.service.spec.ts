@@ -19,4 +19,14 @@ describe('TaskService', () => {
     service.remove(service.getAll()[0].id);
     expect(service.getAll().length).toBe(0);
   });
+
+  it('should keep tasks after reloading (localStorage)', () => {
+    service.add('Persistente', 'Sobrevive a la recarga');
+    TestBed.tick(); // ejecuta el effect que guarda en localStorage
+
+    // Simula recargar la app: se crea un servicio nuevo desde cero.
+    TestBed.resetTestingModule();
+    const reloaded = TestBed.inject(TaskService);
+    expect(reloaded.getAll().map(t => t.title)).toEqual(['Persistente']);
+  });
 });

@@ -1,10 +1,18 @@
-import { Injectable, signal } from '@angular/core';
-import { Task } from '../models/task'; 
+import { Injectable, effect, signal } from '@angular/core';
+import { Task } from '../models/task';
+
+const STORAGE_KEY = 'tasks';
 
 @Injectable({ providedIn: 'root'})
 export class TaskService {
-    private readonly tasks = signal<Task[]>([]);
+    // La lista parte con lo que haya guardado en localStorage (o vacía).
+    private readonly tasks = signal<Task[]>(loadFromStorage<Task>(STORAGE_KEY));
     private nextId = Date.now();
+
+    constructor() {
+        // Cada vez que cambia el signal, se guarda automáticamente en localStorage.
+        effect(() => saveToStorage(STORAGE_KEY, this.tasks()));
+    }
 
     getAll(): Task[] {
         return this.tasks();
@@ -25,3 +33,21 @@ export class TaskService {
 
 }
 
+/** Lee una lista desde localStorage. Si no hay nada o el JSON está dañado, devuelve []. */
+export function loadFromStorage<T>(key: string): T[] {
+    try {
+        const data = JSON.parse(localStorage.getItem(key) ?? '[]');
+        return Array.isArray(data) ? data : [];
+    } catch {
+        return [];
+    }
+}
+
+/** Guarda una lista en localStorage como JSON. */
+export function saveToStorage<T>(key: string, items: readonly T[]): void {
+    try {
+        localStorage.setItem(key, JSON.stringify(items));
+    } catch {
+        // Si el almacenamiento no está disponible (modo privado, sin espacio), la app sigue funcionando en memoria.
+    }
+}

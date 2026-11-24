@@ -14,3 +14,9 @@ if (!window.matchMedia) {
       dispatchEvent: () => false,
     }) as MediaQueryList;
 }
+
+// Los servicios guardan en localStorage; se limpia antes de cada test para que
+// los datos de un test no aparezcan en el siguiente.
+beforeEach(() => {
+  localStorage.clear();
+});

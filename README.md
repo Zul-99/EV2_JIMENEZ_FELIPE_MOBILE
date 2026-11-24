@@ -2,8 +2,6 @@
 
 ## 1. ¿Qué hace la app?
 
-(texto de prueba)
-
 Es una **lista de tareas** con gestión de usuarios y acceso a funciones del celular:
 
 - Escribes un **título** y una **descripción**.
@@ -12,6 +10,7 @@ Es una **lista de tareas** con gestión de usuarios y acceso a funciones del cel
 - Si no hay tareas, aparece el mensaje **"No hay tareas todavía"**.
 - Puedes **tomar una foto** con la cámara y **obtener tu ubicación** (GPS).
 - En la pantalla **Usuarios** puedes agregar y borrar usuarios (ver sección 13).
+- Las tareas y usuarios se guardan en el **`localStorage`** del navegador, así que **no se pierden al recargar** (ver sección 14).
 
 ---
 
@@ -94,7 +93,20 @@ Por eso `UserService` también usa `signal`.
 
 `@Injectable({ providedIn: 'root' })` significa que hay **un solo servicio para toda la app**, y cualquier página puede usarlo.
 
-> ⚠️ Las tareas se guardan **en memoria**: si recargas la app, se pierden.
+### Persistencia con `localStorage`
+
+Al crearse, el servicio lee las tareas guardadas con `loadFromStorage('tasks')`.
+Además, en el constructor tiene un **`effect`**:
+
+```ts
+effect(() => saveToStorage(STORAGE_KEY, this.tasks()));
+```
+
+Un `effect` se ejecuta de nuevo **cada vez que cambia un signal que lee**. Como lee
+`this.tasks()`, cada vez que se agrega, edita o borra una tarea, la lista se guarda sola
+en `localStorage`. Así, `add`, `remove` y `update` no tuvieron que cambiar.
+
+> ℹ️ `localStorage` guarda los datos **solo en ese navegador/dispositivo**. No es una base de datos (ver sección 14).
 
 ---
 
@@ -189,12 +201,13 @@ editingTaskId: number | null = null; // id de la tarea que se está editando (nu
 
 | Archivo | Qué comprueba |
 |---|---|
-| `services/task.service.spec.ts` | Que el servicio se crea y que se puede agregar y borrar una tarea. |
+| `services/task.service.spec.ts` | Que el servicio se crea, que se puede agregar y borrar una tarea, y que las tareas siguen ahí después de "recargar" (se crea un servicio nuevo y lee el `localStorage`). |
 | `home/home.page.spec.ts` | Editar una tarea sin duplicarla, cancelar la edición, que la tarea desaparece de pantalla apenas se confirma el borrado, y que borrar la tarea en edición limpia el formulario. |
 | `users/users.page.spec.ts` | Agregar un usuario (con `trim()`), rechazar nombres muy cortos, que el usuario solo se borra al confirmar y desaparece de pantalla al instante, y las iniciales del avatar. |
 
 En los tests, el `AlertController` se reemplaza por uno falso (*mock*) para poder
-"presionar" el botón **Borrar** desde el código.
+"presionar" el botón **Borrar** desde el código. Además, `src/test-setup.ts` limpia el
+`localStorage` antes de cada test para que los datos de uno no aparezcan en otro.
 
 ---
 
@@ -216,7 +229,9 @@ En los tests, el `AlertController` se reemplaza por uno falso (*mock*) para pode
 - **¿Qué hace `[(ngModel)]`?** → Conecta un input con una variable en ambos sentidos.
 - **¿Para qué es `track` en `@for`?** → Para que Angular identifique cada elemento y actualice la lista de forma eficiente.
 - **¿Qué es lazy loading?** → Cargar una página solo cuando el usuario entra a ella.
-- **¿Por qué se pierden las tareas al recargar?** → Porque se guardan en memoria, no en un almacenamiento permanente.
+- **¿Por qué no se pierden las tareas al recargar?** → Porque se guardan en `localStorage` mediante un `effect`, y el servicio las vuelve a leer al iniciar.
+- **¿Qué es un `effect`?** → Una función que se ejecuta de nuevo cada vez que cambia un `signal` que usa. Aquí se usa para guardar automáticamente.
+- **¿`localStorage` es una base de datos?** → No. Guarda texto (JSON) solo en ese navegador; no se comparte entre dispositivos ni usuarios.
 - **¿Qué es un `signal`?** → Un valor reactivo: cuando cambia, Angular actualiza la pantalla automáticamente.
 - **¿Qué diferencia hay entre `ngModel` y formularios reactivos?** → `ngModel` (tareas) es más simple y se define en el HTML; los formularios reactivos (usuarios) se definen en el TypeScript con `FormBuilder` y permiten validaciones como `Validators.required` o `Validators.email`.
 - **¿Qué es `ion-avatar`?** → El componente circular de Ionic para fotos de perfil.
@@ -226,7 +241,7 @@ En los tests, el `AlertController` se reemplaza por uno falso (*mock*) para pode
 
 ## 12. Cosas que se podrían mejorar
 
-1. **Guardar las tareas y usuarios** con `localStorage` o `@capacitor/preferences` para que no se pierdan.
+1. **Integrar una base de datos real** (ver sección 14).
 2. Cambiar el `appId` (`io.ionic.starter`) por uno propio.
 3. Usar la foto tomada con la cámara como foto de perfil en el `ion-avatar` del usuario.
 4. Asignar tareas a usuarios.
@@ -244,7 +259,29 @@ Cada usuario se muestra con un **avatar redondo** (`ion-avatar`) con sus inicial
 
 La página está en `src/app/users/` y utiliza formularios reactivos.
 `src/app/services/user.service.ts` administra los usuarios (en un `signal`, igual que las tareas) usando el modelo
-`User` de `src/app/models/user.ts`. Los datos se conservan al navegar entre pantallas,
-pero se pierden al recargar la aplicación porque se almacenan en memoria.
+`User` de `src/app/models/user.ts`. Los datos se guardan en `localStorage` (clave `users`), así que se conservan
+al navegar entre pantallas y al recargar la aplicación. El `id` del siguiente usuario
+continúa desde el mayor id guardado, para que no se repitan después de recargar.
 Esta funcionalidad administra una lista de usuarios; no implementa autenticación
 ni asignación de tareas a usuarios.
+
+---
+
+## 14. Persistencia de datos y base de datos pendiente
+
+**Lo que hay:** las tareas (clave `tasks`) y los usuarios (clave `users`) se guardan en
+el `localStorage` del navegador como JSON. Las funciones `loadFromStorage` y `saveToStorage`
+están en `services/task.service.ts` y las usan ambos servicios. Si `localStorage` no está
+disponible o el JSON está dañado, la app parte con la lista vacía y sigue funcionando en memoria.
+
+**Lo que falta:** la evaluación pedía integrar una **base de datos**, y eso **no quedó
+implementado**. Con `localStorage`, los datos:
+
+- viven solo en ese navegador o dispositivo,
+- no se comparten entre usuarios ni equipos,
+- se borran si se limpian los datos del navegador o de la app.
+
+**Cómo se integraría:** como toda la lógica de datos está en los servicios, solo habría
+que cambiar `TaskService` y `UserService` para que lean y escriban en la base de datos
+(por ejemplo SQLite con `@capacitor-community/sqlite` en el celular, o un backend/Firebase
+vía `HttpClient`), sin tocar las páginas. Los `signal` seguirían actualizando la pantalla igual.
